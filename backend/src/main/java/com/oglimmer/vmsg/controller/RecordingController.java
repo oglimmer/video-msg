@@ -4,6 +4,7 @@ package com.oglimmer.vmsg.controller;
 import com.oglimmer.vmsg.dto.RecordingDetailResponse;
 import com.oglimmer.vmsg.dto.RecordingResponse;
 import com.oglimmer.vmsg.entity.Recording;
+import com.oglimmer.vmsg.exception.RecordingNotFoundException;
 import com.oglimmer.vmsg.service.RecordingService;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -43,14 +44,33 @@ public class RecordingController {
   }
 
   @GetMapping("/{uuid}/stream")
-  public ResponseEntity<Resource> streamRecording(
+  public ResponseEntity<?> streamRecording(
       @PathVariable String uuid,
       @RequestHeader(value = "Range", required = false) String rangeHeader) {
+
+    log.info("Stream request received for UUID: {} with Range: {}", uuid, rangeHeader);
+
     try {
+      // Get recording and validate it exists FIRST (before any response is committed)
       Recording recording = recordingService.getRecordingEntityByUuid(uuid);
+      log.info("Found recording: {} with file path: {}", recording.getUuid(), recording.getFilePath());
+
+      // Get the file resource and validate it exists/is readable
       Resource resource = recordingService.streamRecording(uuid);
 
+      // Validate resource is readable
+      if (!resource.exists()) {
+        log.error("Resource does not exist for UUID: {}, path: {}", uuid, recording.getFilePath());
+        throw new RecordingNotFoundException("Video file does not exist for recording: " + uuid);
+      }
+      if (!resource.isReadable()) {
+        log.error("Resource is not readable for UUID: {}, path: {}", uuid, recording.getFilePath());
+        throw new RecordingNotFoundException("Video file is not readable for recording: " + uuid);
+      }
+
       long fileSize = resource.contentLength();
+      log.info("Resource validated - size: {} bytes", fileSize);
+
       HttpHeaders headers = new HttpHeaders();
 
       // Parse content type safely - extract just the base type without codecs if parsing fails
@@ -68,34 +88,27 @@ public class RecordingController {
       }
       headers.setContentType(contentType);
 
-      // Handle Range requests for video seeking
-      if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
-        String[] ranges = rangeHeader.substring(6).split("-");
-        long start = Long.parseLong(ranges[0]);
-        long end =
-            ranges.length > 1 && !ranges[1].isEmpty() ? Long.parseLong(ranges[1]) : fileSize - 1;
-
-        long contentLength = end - start + 1;
-
-        headers.add("Content-Range", String.format("bytes %d-%d/%d", start, end, fileSize));
-        headers.setContentLength(contentLength);
-        headers.add("Accept-Ranges", "bytes");
-
-        // Note: Full Range support with partial content would require
-        // reading only the requested byte range from the file
-        // For now, returning full content with 206 status
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).headers(headers).body(resource);
-      }
-
-      // Full content response
+      // Always return full content for now
+      // TODO: Implement proper Range request support with partial file reading
       headers.setContentLength(fileSize);
-      headers.add("Accept-Ranges", "bytes");
 
+      log.info("Returning full content: {} bytes", fileSize);
       return ResponseEntity.ok().headers(headers).body(resource);
 
+    } catch (RecordingNotFoundException e) {
+      // Re-throw to let global exception handler deal with it
+      // This happens before response is committed, so JSON error response will work
+      log.error("Recording not found: {}", uuid, e);
+      throw e;
     } catch (IOException e) {
-      log.error("Error streaming recording", e);
-      throw new RuntimeException("Failed to stream recording", e);
+      // Log the full error details
+      log.error("IO error while preparing to stream recording {}: {}", uuid, e.getMessage(), e);
+      // Re-throw as RecordingNotFoundException with more details
+      throw new RecordingNotFoundException("Failed to access video file for recording: " + uuid + " - " + e.getMessage());
+    } catch (Exception e) {
+      // Log any unexpected errors
+      log.error("Unexpected error streaming recording {}: {}", uuid, e.getMessage(), e);
+      throw new RuntimeException("Failed to stream recording: " + e.getMessage(), e);
     }
   }
 }

@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 
 /**
@@ -45,41 +46,7 @@ public class VideoReencodingService {
 
     try {
       // Build ffmpeg command for video re-encoding
-      List<String> command = new ArrayList<>();
-      command.add("ffmpeg");
-      command.add("-y"); // Overwrite output file
-      command.add("-fflags");
-      command.add("+genpts"); // Generate presentation timestamps
-      command.add("-i");
-      command.add(videoPath.toAbsolutePath().toString()); // Input file
-
-      // Video codec settings - VP9 for WebM
-      command.add("-c:v");
-      command.add("libvpx-vp9"); // VP9 codec
-      command.add("-b:v");
-      command.add("1M"); // Video bitrate - 1Mbps
-      command.add("-crf");
-      command.add("31"); // Constant Rate Factor (0-63, lower = better quality)
-      command.add("-maxrate");
-      command.add("1.5M"); // Maximum bitrate
-      command.add("-bufsize");
-      command.add("2M"); // Buffer size
-
-      // Audio codec settings - Opus for WebM
-      command.add("-c:a");
-      command.add("libopus"); // Opus codec
-      command.add("-b:a");
-      command.add("128k"); // Audio bitrate
-      command.add("-vbr");
-      command.add("on"); // Variable bitrate for audio
-
-      // Format and timestamp settings
-      command.add("-f");
-      command.add("webm"); // WebM format
-      command.add("-avoid_negative_ts");
-      command.add("make_zero"); // Avoid negative timestamps
-
-      command.add(tempPath.toAbsolutePath().toString()); // Output file
+      List<String> command = createFFmpegCommand(videoPath, tempPath);
 
       log.info("Re-encoding video file: {}", videoPath.getFileName());
       log.debug("ffmpeg command: {}", String.join(" ", command));
@@ -122,5 +89,44 @@ public class VideoReencodingService {
       Files.deleteIfExists(tempPath);
       throw e;
     }
+  }
+
+  private static @NonNull List<String> createFFmpegCommand(Path videoPath, Path tempPath) {
+    List<String> command = new ArrayList<>();
+    command.add("ffmpeg");
+    command.add("-y"); // Overwrite output file
+    command.add("-fflags");
+    command.add("+genpts"); // Generate presentation timestamps
+    command.add("-i");
+    command.add(videoPath.toAbsolutePath().toString()); // Input file
+
+    // Video codec settings - VP9 for WebM
+    command.add("-c:v");
+    command.add("libvpx-vp9"); // VP9 codec
+    command.add("-b:v");
+    command.add("1M"); // Video bitrate - 1Mbps
+    command.add("-crf");
+    command.add("31"); // Constant Rate Factor (0-63, lower = better quality)
+    command.add("-maxrate");
+    command.add("1.5M"); // Maximum bitrate
+    command.add("-bufsize");
+    command.add("2M"); // Buffer size
+
+    // Audio codec settings - Opus for WebM
+    command.add("-c:a");
+    command.add("libopus"); // Opus codec
+    command.add("-b:a");
+    command.add("128k"); // Audio bitrate
+    command.add("-vbr");
+    command.add("on"); // Variable bitrate for audio
+
+    // Format and timestamp settings
+    command.add("-f");
+    command.add("webm"); // WebM format
+    command.add("-avoid_negative_ts");
+    command.add("make_zero"); // Avoid negative timestamps
+
+    command.add(tempPath.toAbsolutePath().toString()); // Output file
+    return command;
   }
 }
