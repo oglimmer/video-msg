@@ -1,0 +1,59 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":enableVulnerabilityAlerts",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Berlin",
+  "prHourlyLimit": 10,
+  "prConcurrentLimit": 5,
+  "rebaseWhen": "behind-base-branch",
+  "rangeStrategy": "bump",
+  "automerge": true,
+  "automergeType": "branch",
+  "ignoreTests": true,
+  "labels": [
+    "dependencies"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ],
+    "automerge": true,
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Disable automerge for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "npm dependencies in frontend",
+      "matchManagers": ["npm"],
+      "matchPaths": ["frontend/**"]
+    },
+    {
+      "description": "Maven dependencies in backend",
+      "matchManagers": ["maven"],
+      "matchPaths": ["backend/**"]
+    },
+    {
+      "description": "Helm dependencies",
+      "matchManagers": ["helm-values"]
+    },
+    {
+      "description": "Docker base images",
+      "matchManagers": ["dockerfile", "docker-compose"]
+    }
+  ]
+}
