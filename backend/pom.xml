@@ -12,7 +12,7 @@
   <artifactId>vmsg</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>vmsg</name>
-  <description>Video messages</description>
+  <description>Screen recording with audio commentary</description>
   <url/>
   <licenses>
     <license/>

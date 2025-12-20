@@ -1,6 +1,6 @@
-# Video Message Application - Deployment Guide
+# Screen Recording Tool - Deployment Guide
 
-This guide covers deploying the Video Message application using Docker and Kubernetes (via Helm).
+This guide covers deploying the screen recording with audio commentary tool using Docker and Kubernetes (via Helm).
 
 ## Table of Contents
 

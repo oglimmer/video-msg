@@ -1,6 +1,6 @@
-# Video Message Helm Chart
+# Screen Recording Tool Helm Chart
 
-This Helm chart deploys the Video Message application with both backend (Java/Spring Boot) and frontend (Vue/Nginx) components.
+This Helm chart deploys the screen recording with audio commentary tool with both backend (Java/Spring Boot) and frontend (Vue/Nginx) components.
 
 ## Prerequisites
 
@@ -72,7 +72,7 @@ helm install video-msg ./helm/video-msg -f custom-values.yaml
 
 ## Configuration
 
-The following table lists the configurable parameters of the Video Message chart and their default values.
+The following table lists the configurable parameters of the screen recording tool chart and their default values.
 
 ### Global Parameters
 

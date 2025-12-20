@@ -50,9 +50,9 @@ function startNewRecording() {
   <div class="max-w-5xl mx-auto px-6 py-12">
     <div class="text-center mb-12">
       <h1 class="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-        Video Message Recorder
+        Screen Recording Tool
       </h1>
-      <p class="text-gray-600 text-lg">Record and share your video messages instantly</p>
+      <p class="text-gray-600 text-lg">Record your screen with audio commentary and share instantly</p>
     </div>
 
     <RecordingControls @recording-stopped="handleRecordingStopped" />

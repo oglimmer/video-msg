@@ -1,11 +1,11 @@
 apiVersion: v2
 name: video-msg
-description: A Helm chart for Video Message application with backend and frontend
+description: A Helm chart for screen recording with audio commentary tool with backend and frontend
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
 maintainers:
-  - name: Video Message Team
+  - name: Screen Recording Team
 keywords:
   - video-msg
   - video

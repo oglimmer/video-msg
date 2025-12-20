@@ -30,7 +30,7 @@ DRY_RUN="${DRY_RUN:-false}"
 RESTART="${RESTART:-true}"
 PUSH="${PUSH:-true}"
 HELP=false
-PLATFORM="${PLATFORM:-multi}"
+PLATFORM="${PLATFORM:-arm64}"
 RELEASE_MODE=false
 SHOW_VERSIONS=false
 
@@ -117,8 +117,8 @@ BUILD OPTIONS:
     # Platform options
     --platform PLATFORM        Target platform(s) for Docker build:
                                - amd64: Build for AMD64/x86_64 architecture
-                               - arm64: Build for ARM64 architecture
-                               - multi: Build for both amd64 and arm64 (multi-platform, default)
+                               - arm64: Build for ARM64 architecture (default)
+                               - multi: Build for both amd64 and arm64 (multi-platform)
                                - auto: Detect current platform automatically
 
     -h, --help              Show this help message

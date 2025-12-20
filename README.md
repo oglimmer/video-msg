@@ -1,6 +1,6 @@
-# Video Messaging Application
+# Screen Recording with Audio Commentary
 
-A full-stack video messaging application built with Vue 3 and Spring Boot.
+A web-based screen recording with audio commentary tool built with Vue 3 and Spring Boot.
 
 ## Tech Stack
 

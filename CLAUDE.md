@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a full-stack video messaging application with a Vue 3 + TypeScript frontend and Spring Boot backend.
+This is a web-based screen recording with audio commentary tool, featuring a Vue 3 + TypeScript frontend and Spring Boot backend.
 
 **Frontend**: Vue 3 with TypeScript, Vite, Pinia for state management, Vue Router for routing
 **Backend**: Spring Boot 4.0.1, Java 21, Maven, JPA with MariaDB, Lombok
