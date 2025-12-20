@@ -5,6 +5,7 @@ export function useMediaRecorder() {
   const recordingTime = ref(0)
   const error = ref<string | null>(null)
   const previewUrl = ref<string | null>(null)
+  const isBrowserSupported = ref(true)
 
   let mediaRecorder: MediaRecorder | null = null
   let chunks: Blob[] = []
@@ -15,7 +16,48 @@ export function useMediaRecorder() {
   let audioContext: AudioContext | null = null
   let audioDestination: MediaStreamAudioDestinationNode | null = null
 
+  // Check browser support on initialization
+  function checkBrowserSupport(): { supported: boolean; message: string | null } {
+    // Check if navigator.mediaDevices is available
+    if (!navigator.mediaDevices) {
+      return {
+        supported: false,
+        message: 'Your browser does not support media devices API. Please use a modern desktop browser like Chrome, Firefox, or Edge.'
+      }
+    }
+
+    // Check if getDisplayMedia is available (not supported on mobile)
+    if (!navigator.mediaDevices.getDisplayMedia) {
+      return {
+        supported: false,
+        message: 'Screen recording is not supported on this device. Please use a desktop browser like Chrome, Firefox, or Edge.'
+      }
+    }
+
+    // Check if MediaRecorder is available
+    if (typeof MediaRecorder === 'undefined') {
+      return {
+        supported: false,
+        message: 'MediaRecorder API is not supported in your browser. Please update your browser or try a different one.'
+      }
+    }
+
+    return { supported: true, message: null }
+  }
+
+  // Run the check on initialization
+  const browserCheck = checkBrowserSupport()
+  isBrowserSupported.value = browserCheck.supported
+  if (!browserCheck.supported && browserCheck.message) {
+    error.value = browserCheck.message
+  }
+
   async function startRecording() {
+    // Prevent recording if browser is not supported
+    if (!isBrowserSupported.value) {
+      throw new Error('Browser does not support screen recording')
+    }
+
     try {
       error.value = null
       chunks = []
@@ -333,6 +375,7 @@ export function useMediaRecorder() {
     recordingTime,
     error,
     previewUrl,
+    isBrowserSupported,
     startRecording,
     stopRecording,
     formatTime
