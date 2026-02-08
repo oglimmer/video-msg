@@ -9,6 +9,7 @@ const recordingStore = useRecordingStore()
 
 const showUploadSection = ref(false)
 const shareLink = ref('')
+const recordingKey = ref(0) // Key to force re-mount of controls
 
 async function handleRecordingStopped(_blob: Blob) {
   showUploadSection.value = true
@@ -43,6 +44,7 @@ function startNewRecording() {
   recordingStore.clearRecording()
   shareLink.value = ''
   showUploadSection.value = false
+  recordingKey.value++ // Force re-mount to reset state/camera
 }
 </script>
 
@@ -55,7 +57,7 @@ function startNewRecording() {
       <p class="text-gray-600 text-lg">Record your screen with audio commentary and share instantly</p>
     </div>
 
-    <RecordingControls @recording-stopped="handleRecordingStopped" />
+    <RecordingControls :key="recordingKey" @recording-stopped="handleRecordingStopped" />
 
     <div v-if="showUploadSection && !recordingStore.uploadedUuid" class="mt-8 text-center">
       <button

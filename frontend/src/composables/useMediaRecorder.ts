@@ -535,7 +535,7 @@ export function useMediaRecorder() {
       audioDestination = null
     }
     stopTimer()
-    // Note: webcam stream is intentionally kept alive between recordings
+    stopWebcam()
   }
 
   function getSupportedMimeType(): string | null {
