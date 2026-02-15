@@ -43,7 +43,7 @@ services:
       retries: 3
 
   mariadb:
-    image: mariadb:10.11
+    image: mariadb:12.2
     environment:
       - MARIADB_ROOT_PASSWORD=root
       - MARIADB_DATABASE=video-message
