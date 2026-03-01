@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "pinia": "^3.0.4",
-    "vue": "^3.5.28",
+    "vue": "^3.5.29",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
@@ -27,16 +27,16 @@
     "@tailwindcss/postcss": "^4.2.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/jsdom": "^27.0.0",
-    "@types/node": "^24.10.13",
+    "@types/node": "^24.11.0",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vitest/eslint-plugin": "^1.6.9",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.24",
+    "autoprefixer": "^10.4.27",
     "eslint": "^9.39.3",
-    "eslint-plugin-playwright": "^2.7.1",
+    "eslint-plugin-playwright": "^2.8.0",
     "eslint-plugin-vue": "~10.8.0",
     "jiti": "^2.6.1",
     "jsdom": "^27.4.0",
@@ -46,7 +46,7 @@
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
-    "vite-plugin-vue-devtools": "^8.0.6",
+    "vite-plugin-vue-devtools": "^8.0.7",
     "vitest": "^4.0.18",
     "vue-tsc": "^3.2.5"
   }
