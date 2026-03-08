@@ -20,7 +20,6 @@ async function loadRecording() {
     loading.value = true
     recording.value = await apiService.getRecordingMetadata(uuid.value)
 
-    // Check if still processing
     if (recording.value.processingStatus === ProcessingStatus.PROCESSING) {
       isProcessing.value = true
       startPolling()
@@ -39,7 +38,6 @@ async function loadRecording() {
 }
 
 function startPolling() {
-  // Poll every 3 seconds
   if (!pollingInterval) {
     pollingInterval = window.setInterval(async () => {
       try {
@@ -89,106 +87,116 @@ function formatDate(dateString: string): string {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto px-6 py-12">
-    <h1 class="text-5xl font-bold text-center bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-12">
-      Watch Recording
-    </h1>
-
-    <div v-if="loading" class="text-center py-24">
-      <div class="inline-block w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
-      <p class="text-xl text-gray-600 font-medium">Loading recording...</p>
-    </div>
-
-    <div v-else-if="error" class="text-center py-16 bg-white rounded-2xl shadow-xl p-12 border border-red-100">
-      <div class="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
-        <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </div>
-      <p class="text-red-600 text-xl font-semibold mb-6">{{ error }}</p>
+  <div class="max-w-4xl mx-auto px-6 py-12 min-h-screen">
+    <!-- Back nav -->
+    <nav class="mb-8 animate-fade-up">
       <button
         @click="goToRecord"
-        class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+        class="group flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors text-sm font-display font-semibold cursor-pointer"
+      >
+        <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        New Recording
+      </button>
+    </nav>
+
+    <!-- Loading -->
+    <div v-if="loading" class="flex flex-col items-center justify-center py-32 animate-fade-in">
+      <div class="w-10 h-10 border-2 border-border-subtle border-t-accent rounded-full animate-spin mb-4"></div>
+      <p class="text-text-muted text-sm font-display">Loading recording...</p>
+    </div>
+
+    <!-- Error -->
+    <div v-else-if="error" class="flex flex-col items-center justify-center py-32 animate-fade-up">
+      <div class="w-14 h-14 rounded-full bg-danger/10 flex items-center justify-center mb-5">
+        <svg class="w-6 h-6 text-danger" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </div>
+      <p class="text-danger text-base font-display font-semibold mb-2">Something went wrong</p>
+      <p class="text-text-muted text-sm mb-6">{{ error }}</p>
+      <button
+        @click="goToRecord"
+        class="px-6 py-3 bg-surface-overlay border border-border-subtle hover:border-accent/40 text-text-primary font-display font-semibold text-sm rounded-lg transition-all duration-200 cursor-pointer"
       >
         Back to Recorder
       </button>
     </div>
 
-    <div v-else-if="recording" class="flex flex-col gap-8">
-      <!-- Processing Status Message -->
-      <div v-if="recording.processingStatus === 'PROCESSING'" class="text-center py-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl shadow-2xl text-white">
-        <div class="inline-block w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mb-8"></div>
-        <h2 class="text-3xl font-bold mb-4">Processing Video...</h2>
-        <p class="text-lg mb-2 opacity-95">Your video is being re-encoded to ensure optimal playback. This may take a minute.</p>
-        <p class="text-sm opacity-80 italic">The page will update automatically when processing is complete.</p>
-      </div>
-
-      <!-- Failed Status Message -->
-      <div v-else-if="recording.processingStatus === 'FAILED'" class="text-center py-16 bg-white rounded-2xl shadow-xl p-12 border border-red-100">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
-          <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-          </svg>
-        </div>
-        <h2 class="text-3xl font-bold text-gray-800 mb-4">Processing Failed</h2>
-        <p class="text-red-600 text-lg mb-6">{{ recording.processingError || 'An error occurred while processing your video.' }}</p>
-        <button
-          @click="goToRecord"
-          class="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-        >
-          Try Recording Again
-        </button>
-      </div>
-
-      <!-- Video Player (only show when READY) -->
-      <VideoPlayer v-else :uuid="uuid" />
-
-      <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Recording Details</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Filename</span>
-            <span class="text-base text-gray-800 font-medium">{{ recording.filename }}</span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Size</span>
-            <span class="text-base text-gray-800 font-medium">{{ formatFileSize(recording.fileSize) }}</span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Type</span>
-            <span class="text-base text-gray-800 font-medium">{{ recording.contentType }}</span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Status</span>
-            <span
-              class="text-base font-bold"
-              :class="{
-                'text-amber-600': recording.processingStatus === 'PROCESSING',
-                'text-emerald-600': recording.processingStatus === 'READY',
-                'text-red-600': recording.processingStatus === 'FAILED'
-              }"
-            >
-              {{ recording.processingStatus }}
-            </span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Created</span>
-            <span class="text-base text-gray-800 font-medium">{{ formatDate(recording.createdAt) }}</span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">UUID</span>
-            <span class="text-sm text-gray-800 font-mono break-all">{{ recording.uuid }}</span>
+    <!-- Content -->
+    <div v-else-if="recording" class="flex flex-col gap-6">
+      <!-- Processing -->
+      <div v-if="recording.processingStatus === 'PROCESSING'" class="animate-fade-up">
+        <div class="bg-surface-raised border border-border-subtle rounded-2xl p-12 text-center">
+          <div class="w-12 h-12 border-2 border-border-subtle border-t-accent rounded-full animate-spin mx-auto mb-6"></div>
+          <h2 class="font-display font-bold text-2xl text-text-primary mb-3">Processing your video</h2>
+          <p class="text-text-secondary text-sm mb-2">Re-encoding for optimal playback. This may take a minute.</p>
+          <p class="text-text-muted text-xs">This page updates automatically.</p>
+          <!-- Animated bar -->
+          <div class="mt-8 w-full h-0.5 bg-surface-overlay rounded-full overflow-hidden">
+            <div class="h-full w-1/3 bg-accent/60 rounded-full" style="animation: processing-bar 2s ease-in-out infinite;"></div>
           </div>
         </div>
       </div>
 
-      <div class="text-center">
-        <button
-          @click="goToRecord"
-          class="px-8 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-        >
-          Create New Recording
-        </button>
+      <!-- Failed -->
+      <div v-else-if="recording.processingStatus === 'FAILED'" class="animate-fade-up">
+        <div class="bg-surface-raised border border-danger/20 rounded-2xl p-12 text-center">
+          <div class="w-14 h-14 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-5">
+            <svg class="w-6 h-6 text-danger" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h2 class="font-display font-bold text-2xl text-text-primary mb-3">Processing Failed</h2>
+          <p class="text-danger text-sm mb-6">{{ recording.processingError || 'An error occurred while processing your video.' }}</p>
+          <button
+            @click="goToRecord"
+            class="px-6 py-3 bg-surface-overlay border border-border-subtle hover:border-accent/40 text-text-primary font-display font-semibold text-sm rounded-lg transition-all duration-200 cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+
+      <!-- Video player -->
+      <div v-else class="animate-fade-up">
+        <VideoPlayer :uuid="uuid" />
+      </div>
+
+      <!-- Recording details -->
+      <div class="bg-surface-raised border border-border-subtle rounded-xl p-6 animate-fade-up delay-2">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="font-display font-bold text-base text-text-primary">Details</h2>
+          <span
+            class="px-2.5 py-1 rounded-md text-xs font-display font-bold uppercase tracking-wider"
+            :class="{
+              'bg-warning/10 text-warning': recording.processingStatus === 'PROCESSING',
+              'bg-success/10 text-success': recording.processingStatus === 'READY',
+              'bg-danger/10 text-danger': recording.processingStatus === 'FAILED'
+            }"
+          >
+            {{ recording.processingStatus }}
+          </span>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <div>
+            <span class="text-text-muted text-xs font-display font-semibold uppercase tracking-wider block mb-1">Filename</span>
+            <span class="text-text-secondary text-sm truncate block">{{ recording.filename }}</span>
+          </div>
+          <div>
+            <span class="text-text-muted text-xs font-display font-semibold uppercase tracking-wider block mb-1">Size</span>
+            <span class="text-text-secondary text-sm">{{ formatFileSize(recording.fileSize) }}</span>
+          </div>
+          <div>
+            <span class="text-text-muted text-xs font-display font-semibold uppercase tracking-wider block mb-1">Type</span>
+            <span class="text-text-secondary text-sm">{{ recording.contentType }}</span>
+          </div>
+          <div>
+            <span class="text-text-muted text-xs font-display font-semibold uppercase tracking-wider block mb-1">Created</span>
+            <span class="text-text-secondary text-sm">{{ formatDate(recording.createdAt) }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

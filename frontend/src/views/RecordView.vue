@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import RecordingControls from '@/components/RecordingControls.vue'
 import { useRecordingStore } from '@/stores/recording'
@@ -9,6 +9,9 @@ const recordingStore = useRecordingStore()
 
 const showUploadSection = ref(false)
 const shareLink = ref('')
+const copied = ref(false)
+
+const isComplete = computed(() => !!shareLink.value)
 
 async function handleRecordingStopped(_blob: Blob) {
   showUploadSection.value = true
@@ -29,7 +32,10 @@ async function uploadRecording() {
 
 function copyToClipboard() {
   navigator.clipboard.writeText(shareLink.value)
-    .then(() => alert('Link copied to clipboard!'))
+    .then(() => {
+      copied.value = true
+      setTimeout(() => (copied.value = false), 2000)
+    })
     .catch(err => console.error('Failed to copy:', err))
 }
 
@@ -47,79 +53,115 @@ function startNewRecording() {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-6 py-12">
-    <div class="text-center mb-12">
-      <h1 class="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-        Screen Recording Tool
+  <div class="max-w-3xl mx-auto px-6 py-16 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="text-center mb-16 animate-fade-up">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-overlay border border-border-subtle mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
+        <span class="text-xs font-display font-semibold text-text-secondary uppercase tracking-widest">Screen + Audio</span>
+      </div>
+      <h1 class="font-display text-5xl sm:text-6xl font-extrabold text-text-primary tracking-tight leading-none mb-4">
+        Record.<br>
+        <span class="text-text-muted">Comment.</span><br>
+        <span class="text-accent">Share.</span>
       </h1>
-      <p class="text-gray-600 text-lg">Record your screen with audio commentary and share instantly</p>
-    </div>
+    </header>
 
-    <RecordingControls @recording-stopped="handleRecordingStopped" />
+    <!-- Recording controls -->
+    <div class="flex-1 flex flex-col items-center justify-start">
+      <RecordingControls @recording-stopped="handleRecordingStopped" />
 
-    <div v-if="showUploadSection && !recordingStore.uploadedUuid" class="mt-8 text-center">
-      <button
-        @click="uploadRecording"
-        :disabled="recordingStore.isUploading"
-        class="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-      >
-        {{ recordingStore.isUploading ? 'Uploading...' : 'Upload Recording' }}
-      </button>
-
-      <div v-if="recordingStore.isUploading" class="mt-6 max-w-md mx-auto">
-        <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-          <div
-            class="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 ease-out rounded-full"
-            :style="{ width: recordingStore.uploadProgress + '%' }"
-          ></div>
-        </div>
-        <p class="mt-3 text-gray-700 font-medium">Uploading... {{ recordingStore.uploadProgress }}%</p>
-      </div>
-
-      <div v-if="recordingStore.error" class="mt-6 max-w-md mx-auto bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl">
-        {{ recordingStore.error }}
-      </div>
-    </div>
-
-    <div v-if="shareLink" class="mt-12 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-      <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full mb-4">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      <!-- Upload section -->
+      <div v-if="showUploadSection && !isComplete" class="mt-10 flex flex-col items-center gap-6 animate-fade-up">
+        <button
+          @click="uploadRecording"
+          :disabled="recordingStore.isUploading"
+          class="group flex items-center gap-3 px-8 py-4 bg-accent hover:bg-accent-hover text-white font-display font-bold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_var(--color-accent-glow)] hover:shadow-[0_0_40px_var(--color-accent-glow)] cursor-pointer"
+        >
+          <svg v-if="!recordingStore.isUploading" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
           </svg>
+          <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          {{ recordingStore.isUploading ? 'Uploading...' : 'Upload & Share' }}
+        </button>
+
+        <!-- Progress bar -->
+        <div v-if="recordingStore.isUploading" class="w-full max-w-sm">
+          <div class="w-full h-1 bg-surface-overlay rounded-full overflow-hidden">
+            <div
+              class="h-full bg-accent transition-all duration-300 ease-out rounded-full"
+              :style="{ width: recordingStore.uploadProgress + '%' }"
+            ></div>
+          </div>
+          <p class="mt-2 text-text-muted text-xs text-center font-mono tabular-nums">{{ recordingStore.uploadProgress }}%</p>
         </div>
-        <h2 class="text-3xl font-bold text-gray-800">Recording Uploaded Successfully!</h2>
+
+        <!-- Error -->
+        <div v-if="recordingStore.error" class="w-full max-w-sm bg-surface-overlay border border-danger/30 text-danger px-5 py-3 rounded-xl text-sm">
+          {{ recordingStore.error }}
+        </div>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-3 mb-6">
-        <input
-          type="text"
-          :value="shareLink"
-          readonly
-          class="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        <button
-          @click="copyToClipboard"
-          class="px-6 py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap shadow-md hover:shadow-lg"
-        >
-          Copy Link
-        </button>
-      </div>
+      <!-- Success / Share section -->
+      <div v-if="isComplete" class="mt-10 w-full animate-fade-up">
+        <div class="bg-surface-raised border border-border-subtle rounded-2xl p-8">
+          <!-- Success indicator -->
+          <div class="flex items-center gap-3 mb-6">
+            <span class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </span>
+            <h2 class="font-display font-bold text-xl text-text-primary">Ready to share</h2>
+          </div>
 
-      <div class="flex flex-col sm:flex-row gap-3 justify-center">
-        <button
-          @click="watchRecording"
-          class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-        >
-          Watch Recording
-        </button>
-        <button
-          @click="startNewRecording"
-          class="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-        >
-          Start New Recording
-        </button>
+          <!-- Share link -->
+          <div class="flex gap-2 mb-6">
+            <input
+              type="text"
+              :value="shareLink"
+              readonly
+              class="flex-1 px-4 py-3 bg-surface-overlay border border-border-subtle rounded-lg text-text-secondary text-sm font-mono focus:outline-none focus:border-accent/50 transition-colors"
+            />
+            <button
+              @click="copyToClipboard"
+              class="px-5 py-3 bg-surface-overlay border border-border-subtle hover:border-accent/40 text-text-primary text-sm font-display font-semibold rounded-lg transition-all duration-200 whitespace-nowrap cursor-pointer"
+            >
+              {{ copied ? 'Copied!' : 'Copy' }}
+            </button>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-3">
+            <button
+              @click="watchRecording"
+              class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-white font-display font-bold text-sm rounded-lg transition-all duration-200 cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Watch
+            </button>
+            <button
+              @click="startNewRecording"
+              class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-surface-overlay border border-border-subtle hover:border-text-muted text-text-secondary hover:text-text-primary font-display font-semibold text-sm rounded-lg transition-all duration-200 cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              New Recording
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="text-center mt-16 animate-fade-in delay-5">
+      <p class="text-text-muted text-xs tracking-wide">Screen + Mic recording in your browser. Nothing leaves your device until you hit upload.</p>
+    </footer>
   </div>
 </template>

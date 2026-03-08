@@ -1,7 +1,9 @@
 <script setup lang="ts"></script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-    <RouterView />
+  <div class="noise-bg min-h-screen bg-surface relative">
+    <div class="relative z-10">
+      <RouterView />
+    </div>
   </div>
 </template>
