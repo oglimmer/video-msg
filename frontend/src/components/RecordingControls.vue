@@ -1,15 +1,66 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useMediaRecorder } from '@/composables/useMediaRecorder'
 import { useRecordingStore } from '@/stores/recording'
+import WebcamPreview from '@/components/WebcamPreview.vue'
 
 const emit = defineEmits<{
   recordingStopped: [blob: Blob]
 }>()
 
-const { isRecording, recordingTime, error, previewUrl, isBrowserSupported, startRecording, stopRecording, formatTime } = useMediaRecorder()
+const {
+  isRecording,
+  recordingTime,
+  error,
+  previewUrl,
+  isBrowserSupported,
+  startRecording,
+  stopRecording,
+  formatTime,
+  webcamEnabled,
+  webcamStream,
+  toggleWebcam,
+  initWebcam,
+  setWebcamLayout
+} = useMediaRecorder()
 const recordingStore = useRecordingStore()
 const isStopping = ref(false)
+const currentLayoutMode = ref<'tl' | 'tr' | 'bl' | 'br' | 'center'>('bl')
+
+onMounted(async () => {
+  if (webcamEnabled.value) {
+    await initWebcam()
+  }
+})
+
+function setLayout(mode: 'tl' | 'tr' | 'bl' | 'br' | 'center') {
+  currentLayoutMode.value = mode
+  
+  // Update recording compositor
+  // Coordinates are normalized (0.0 - 1.0)
+  // Size is normalized radius relative to min(width, height)
+  let layout = { x: 0.1, y: 0.9, size: 0.09 } // Default BL
+
+  switch (mode) {
+    case 'tl':
+      layout = { x: 0.1, y: 0.15, size: 0.09 }
+      break
+    case 'tr':
+      layout = { x: 0.9, y: 0.15, size: 0.09 }
+      break
+    case 'bl':
+      layout = { x: 0.1, y: 0.85, size: 0.09 }
+      break
+    case 'br':
+      layout = { x: 0.9, y: 0.85, size: 0.09 }
+      break
+    case 'center':
+      layout = { x: 0.5, y: 0.5, size: 0.27 } // Large size for focus
+      break
+  }
+  
+  setWebcamLayout(layout)
+}
 
 async function handleStart() {
   try {
@@ -53,6 +104,67 @@ async function handleStop() {
       {{ error }}
     </div>
 
+    <!-- Webcam toggle and Layout Controls -->
+    <div v-if="isBrowserSupported && !previewUrl" class="flex flex-col items-center gap-4 mb-6">
+      <button
+        @click="toggleWebcam"
+        class="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200"
+        :class="webcamEnabled
+          ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 ring-1 ring-indigo-300'
+          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 ring-1 ring-gray-300'"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path v-if="webcamEnabled" stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9.75a2.25 2.25 0 002.25-2.25V7.5a2.25 2.25 0 00-2.25-2.25H4.5A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+          <path v-else stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M12 18.75H4.5a2.25 2.25 0 01-2.25-2.25V9m12.841 9.091L16.5 19.5m-1.409-.591l-6.341-6.34M2.25 7.5l14.5 14.5" />
+        </svg>
+        {{ webcamEnabled ? 'Camera On' : 'Camera Off' }}
+      </button>
+
+      <!-- Layout Controls -->
+      <div v-if="webcamEnabled" class="flex items-center gap-3 p-2 bg-gray-100 rounded-xl">
+        <button 
+          @click="setLayout('tl')" 
+          title="Top Left"
+          class="p-3 rounded-lg shadow-sm transition-all duration-200"
+          :class="currentLayoutMode === 'tl' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-indigo-600'"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h6v6H3V3z" /></svg>
+        </button>
+        <button 
+          @click="setLayout('tr')" 
+          title="Top Right"
+          class="p-3 rounded-lg shadow-sm transition-all duration-200"
+          :class="currentLayoutMode === 'tr' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-indigo-600'"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h6v6h-6V3z" /></svg>
+        </button>
+        <button 
+          @click="setLayout('center')" 
+          title="Focus Center"
+          class="p-3 rounded-lg shadow-sm transition-all duration-200"
+          :class="currentLayoutMode === 'center' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-indigo-600'"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4z M9 9h6v6H9V9z" /></svg>
+        </button>
+        <button 
+          @click="setLayout('bl')" 
+          title="Bottom Left"
+          class="p-3 rounded-lg shadow-sm transition-all duration-200"
+          :class="currentLayoutMode === 'bl' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-indigo-600'"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15h6v6H3v-6z" /></svg>
+        </button>
+        <button 
+          @click="setLayout('br')" 
+          title="Bottom Right"
+          class="p-3 rounded-lg shadow-sm transition-all duration-200"
+          :class="currentLayoutMode === 'br' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-indigo-600'"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15h6v6h-6v-6z" /></svg>
+        </button>
+      </div>
+    </div>
+
     <div class="flex flex-col items-center gap-6 mb-8">
       <button
         v-if="!isRecording"
@@ -90,6 +202,9 @@ async function handleStop() {
         </button>
       </div>
     </div>
+
+    <!-- Webcam live preview bubble (shown when webcam is on) -->
+    <WebcamPreview :stream="webcamStream" />
 
     <div v-if="previewUrl && !isRecording" class="mt-8">
       <h3 class="text-2xl font-bold text-gray-800 mb-4">Preview</h3>
