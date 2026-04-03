@@ -19,7 +19,7 @@ FRONTEND_DEPLOYMENT="$DEFAULT_FRONTEND_DEPLOYMENT"
 BACKEND_DEPLOYMENT="$DEFAULT_BACKEND_DEPLOYMENT"
 
 # Directories
-BACKEND_DIR="$SCRIPT_DIR/backend"
+BACKEND_DIR="$SCRIPT_DIR/backend-go"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
 # Default options (can be overridden by environment variables)
@@ -33,6 +33,7 @@ HELP=false
 PLATFORM="${PLATFORM:-arm64}"
 RELEASE_MODE=false
 SHOW_VERSIONS=false
+LOCAL_BUILD_GRAAL=false
 
 # Color output (only if terminal supports it)
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
@@ -98,6 +99,7 @@ COMMANDS:
     build               Build and deploy components (default)
     release             Create a new release with version bumping and build
     show                Show current backend and frontend versions
+    local-build-graal   Build Spring Boot backend as GraalVM native image locally
 
 BUILD OPTIONS:
     -f, --frontend          Build and deploy frontend only
@@ -129,6 +131,7 @@ EXAMPLES:
     ${SCRIPT_NAME} build -b -v                              # Build and deploy backend with verbose output
     ${SCRIPT_NAME} release                                  # Create a new release with version bump and build
     ${SCRIPT_NAME} show                                     # Show current versions
+    ${SCRIPT_NAME} local-build-graal                           # Build Spring Boot native image with GraalVM
     ${SCRIPT_NAME} build --registries my-registry.com                               # Use custom registry
     ${SCRIPT_NAME} build --registries "reg1.com,reg2.com"                          # Push to multiple registries
     ${SCRIPT_NAME} build --registries localhost:5000 --no-push                     # Use local registry without pushing
@@ -161,6 +164,10 @@ parse_args() {
                 ;;
             show)
                 SHOW_VERSIONS=true
+                shift
+                ;;
+            local-build-graal)
+                LOCAL_BUILD_GRAAL=true
                 shift
                 ;;
             help|-h|--help)
@@ -275,7 +282,7 @@ parse_args() {
     fi
 
     # If no component specified for build mode, build both
-    if [[ "$RELEASE_MODE" == false && "$SHOW_VERSIONS" == false && "$BUILD_FRONTEND" == false && "$BUILD_BACKEND" == false ]]; then
+    if [[ "$RELEASE_MODE" == false && "$SHOW_VERSIONS" == false && "$LOCAL_BUILD_GRAAL" == false && "$BUILD_FRONTEND" == false && "$BUILD_BACKEND" == false ]]; then
         BUILD_FRONTEND=true
         BUILD_BACKEND=true
     fi
@@ -288,7 +295,7 @@ check_prerequisites() {
 
     # Add additional tools for release mode
     if [[ "$RELEASE_MODE" == true ]]; then
-        tools+=("mvn" "npm" "git")
+        tools+=("npm" "git")
     fi
 
     for tool in "${tools[@]}"; do
@@ -330,13 +337,9 @@ check_prerequisites() {
 
 # Show current versions
 show_versions() {
-    # Backend version
+    # Backend version (from VERSION file)
     local backend_version
-    backend_version=$(mvn -q \
-        -Dexec.executable=echo \
-        -Dexec.args='${project.version}' \
-        --non-recursive exec:exec \
-        -f "$BACKEND_DIR/pom.xml")
+    backend_version=$(cat "$BACKEND_DIR/VERSION" | tr -d '[:space:]')
 
     # Frontend version
     local frontend_version
@@ -536,7 +539,7 @@ execute_build() {
 
     # Build backend
     if [[ "$BUILD_BACKEND" == true ]]; then
-        build_image "backend" "backend" "${BACKEND_IMAGES[@]}"
+        build_image "backend" "backend-go" "${BACKEND_IMAGES[@]}"
     fi
 
     # Restart deployments if requested
@@ -578,13 +581,13 @@ execute_release() {
     done
 
     # Compute new version
-    current_version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec -f "$BACKEND_DIR/pom.xml")
+    current_version=$(cat "$BACKEND_DIR/VERSION" | tr -d '[:space:]')
     new_version=$(bump_version "$current_version" "$bump")
     log_info "Releasing version $new_version..."
 
     # Update backend to release version
     log_info "Updating backend version to $new_version..."
-    mvn versions:set -DnewVersion="$new_version" -DgenerateBackupPoms=false -f "$BACKEND_DIR/pom.xml"
+    echo "$new_version" > "$BACKEND_DIR/VERSION"
 
     # Update frontend
     log_info "Updating frontend version to $new_version..."
@@ -592,7 +595,7 @@ execute_release() {
 
     # Commit and tag release
     log_info "Committing version changes and creating tag..."
-    git add "$BACKEND_DIR/pom.xml" "$FRONTEND_DIR/package.json" "$FRONTEND_DIR/package-lock.json"
+    git add "$BACKEND_DIR/VERSION" "$FRONTEND_DIR/package.json" "$FRONTEND_DIR/package-lock.json"
     git commit -m "Release v$new_version"
     git tag -a "v$new_version" -m "Release v$new_version"
 
@@ -605,11 +608,53 @@ execute_release() {
     # Bump backend to SNAPSHOT
     log_info "Setting backend to SNAPSHOT version..."
     snapshot="${new_version}-SNAPSHOT"
-    mvn versions:set -DnewVersion="$snapshot" -DgenerateBackupPoms=false -f "$BACKEND_DIR/pom.xml"
-    git add "$BACKEND_DIR/pom.xml"
+    echo "$snapshot" > "$BACKEND_DIR/VERSION"
+    git add "$BACKEND_DIR/VERSION"
     git commit -m "Set backend to $snapshot"
 
     log_success "Release v$new_version complete. Backend is now $snapshot."
+}
+
+# Execute local GraalVM native image build for Spring Boot backend
+execute_local_build_graal() {
+    local graalvm_home="/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home"
+    local backend_spring_dir="$SCRIPT_DIR/backend"
+
+    if [[ ! -d "$graalvm_home" ]]; then
+        log_error "GraalVM not found at $graalvm_home"
+        log_info "Install it with: brew install --cask graalvm-jdk"
+        exit 1
+    fi
+
+    log_info "Building Spring Boot backend as GraalVM native image..."
+    log_info "Using JAVA_HOME=$graalvm_home"
+
+    local build_cmd="cd '$backend_spring_dir' && JAVA_HOME='$graalvm_home' ./mvnw -Pnative native:compile -DskipTests"
+
+    if [[ "$VERBOSE" == true ]]; then
+        log_verbose "Build command: $build_cmd"
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo -e "${YELLOW}[DRY-RUN]${RESET} ${build_cmd}"
+        return 0
+    fi
+
+    if eval "$build_cmd"; then
+        # Fix macOS @rpath/libz-1.dylib issue: GraalVM 25 links against its own
+        # bundled libz via @rpath but doesn't embed the rpath in the binary.
+        # Rewrite to use the system libz instead.
+        local binary="$backend_spring_dir/target/vmsg"
+        if [[ "$(uname)" == "Darwin" ]] && otool -L "$binary" 2>/dev/null | grep -q '@rpath/libz'; then
+            log_info "Fixing macOS libz linkage..."
+            install_name_tool -change @rpath/libz-1.dylib /usr/lib/libz.1.dylib "$binary"
+            log_success "Fixed libz linkage to /usr/lib/libz.1.dylib"
+        fi
+        log_success "Native image built successfully: $binary"
+    else
+        log_error "Native image build failed"
+        exit 1
+    fi
 }
 
 # Main execution function
@@ -629,6 +674,11 @@ main() {
 
     if [[ "$SHOW_VERSIONS" == true ]]; then
         show_versions
+        exit 0
+    fi
+
+    if [[ "$LOCAL_BUILD_GRAAL" == true ]]; then
+        execute_local_build_graal
         exit 0
     fi
 
