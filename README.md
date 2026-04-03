@@ -1,6 +1,6 @@
 # Screen Recording with Audio Commentary
 
-A web-based screen recording with audio commentary tool built with Vue 3 and Spring Boot.
+A web-based screen recording with audio commentary tool built with Vue 3 and Go.
 
 ## Tech Stack
 
@@ -12,20 +12,21 @@ A web-based screen recording with audio commentary tool built with Vue 3 and Spr
 - **Vitest** for unit testing
 - **Playwright** for end-to-end testing
 
-### Backend
-- **Spring Boot 4.0.1** with Spring MVC
-- **Java 21**
-- **Maven** for build management
-- **Spring Data JPA** with MariaDB
-- **Lombok** for code generation
-- **Spring Boot Actuator** for monitoring
+### Backend (Go) — `backend-go/`
+- **Go** with chi router
+- **MariaDB** via `database/sql` + `go-sql-driver/mysql`
+- **golang-migrate** for schema migrations
+- **FFmpeg** for video re-encoding (VP9 + Opus)
+
+### Backend (Spring Boot) — `backend/` (deprecated)
+> **Deprecated.** The original Spring Boot backend is kept for reference but is no longer actively developed or deployed. It requires significantly more resources (2 CPU / 4 GB RAM) compared to the Go backend (1 CPU / 512 MB RAM).
 
 ## Prerequisites
 
 - **Node.js**: ^20.19.0 or >=22.12.0
-- **Java**: JDK 21
+- **Go**: 1.26+
 - **MariaDB**: Latest stable version
-- **Maven**: Included via Maven Wrapper
+- **FFmpeg**: Required for video re-encoding
 
 ## Project Structure
 
@@ -38,10 +39,13 @@ video-msg/
 │   │   └── __tests__/    # Unit tests
 │   ├── e2e/              # Playwright e2e tests
 │   └── package.json
-└── backend/              # Spring Boot REST API
+├── backend-go/            # Go REST API (active)
+│   ├── cmd/server/       # Entry point
+│   ├── internal/         # Handlers, services, repository
+│   ├── migrations/       # SQL schema migrations
+│   └── Dockerfile
+└── backend/               # Spring Boot REST API (deprecated)
     ├── src/
-    │   ├── main/java/com/oglimmer/vmsg/
-    │   └── test/         # Backend tests
     └── pom.xml
 ```
 
@@ -56,16 +60,20 @@ cd video-msg
 
 ### 2. Setup Database
 
-Create a MariaDB database and configure the connection in `backend/src/main/resources/application.yaml`.
+Start MariaDB using the included compose file:
+
+```bash
+docker compose up -d
+```
+
+Or create a MariaDB database manually. The Go backend runs migrations automatically on startup.
 
 ### 3. Backend Setup
 
 ```bash
-cd backend
-./mvnw clean install
+cd backend-go
+go build ./...
 ```
-
-On Windows, use `mvnw.cmd` instead of `./mvnw`.
 
 ### 4. Frontend Setup
 
@@ -87,8 +95,8 @@ Run the frontend and backend in separate terminal windows:
 
 **Terminal 1 - Backend:**
 ```bash
-cd backend
-./mvnw spring-boot:run
+cd backend-go
+go run ./cmd/server
 ```
 
 **Terminal 2 - Frontend:**
@@ -98,6 +106,15 @@ npm run dev
 ```
 
 The frontend will typically be available at `http://localhost:5173` and the backend at `http://localhost:8080`.
+
+### Environment Variables (Backend)
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_DSN` | `video-message:video-message@tcp(localhost:3306)/video-message?parseTime=true` | MariaDB connection string |
+| `FILE_STORAGE_BASE_DIRECTORY` | `./video-storage` | Video file storage path |
+| `SERVER_PORT` | `8080` | HTTP listen port |
+| `CORS_ALLOWED_ORIGIN` | `http://localhost:5173` | Allowed CORS origin |
 
 ## Development Commands
 
@@ -126,24 +143,23 @@ npm run test:e2e -- --debug    # Run in debug mode
 ### Backend
 
 ```bash
-cd backend
+cd backend-go
 
 # Build & Run
-./mvnw clean install           # Build project and run tests
-./mvnw spring-boot:run         # Run the application
-./mvnw clean                   # Clean build artifacts
+go build ./...                 # Build all packages
+go run ./cmd/server            # Run the application
+go vet ./...                   # Run static analysis
 
 # Testing
-./mvnw test                    # Run tests only
+go test ./...                  # Run all tests
+go test ./... -v               # Run tests with verbose output
 ```
 
 ## Configuration
 
 - **Frontend**: Configuration in `frontend/vite.config.ts`
   - Path alias `@` points to `src/` directory
-- **Backend**: Configuration in `backend/src/main/resources/application.yaml`
-  - Database connection settings
-  - Server port and other Spring Boot settings
+- **Backend**: Configuration via environment variables (see table above)
 
 ## License
 

@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a web-based screen recording with audio commentary tool, featuring a Vue 3 + TypeScript frontend and Spring Boot backend.
+This is a web-based screen recording with audio commentary tool, featuring a Vue 3 + TypeScript frontend and Go backend.
 
 **Frontend**: Vue 3 with TypeScript, Vite, Pinia for state management, Vue Router for routing
-**Backend**: Spring Boot 4.0.1, Java 21, Maven, JPA with MariaDB, Lombok
+**Backend**: Go with chi router, database/sql with MariaDB, golang-migrate, FFmpeg for video re-encoding
+
+> **Note**: `backend/` contains the original Spring Boot backend, which is deprecated and resource-heavy (requires 2 CPU / 4 GB RAM vs 1 CPU / 512 MB for Go). All active backend development is in `backend-go/`.
 
 ## Frontend (frontend/)
 
@@ -45,34 +47,43 @@ npm run test:e2e -- --debug    # Run in debug mode
 - **TypeScript**: Uses vue-tsc for type checking Vue components
 - **Node Version**: Requires Node.js ^20.19.0 or >=22.12.0
 
-## Backend (backend/)
+## Backend (backend-go/)
 
 ### Development Commands
 
 ```bash
-cd backend
-./mvnw clean install           # Build project and run tests
-./mvnw spring-boot:run         # Run the application
-./mvnw test                    # Run tests only
-./mvnw clean                   # Clean build artifacts
+cd backend-go
+go build ./...                 # Build all packages
+go run ./cmd/server            # Run the application
+go test ./...                  # Run all tests
+go test ./... -v               # Run tests with verbose output
+go vet ./...                   # Run static analysis
 ```
-
-On Windows, use `mvnw.cmd` instead of `./mvnw`.
 
 ### Architecture
 
-- **Framework**: Spring Boot 4.0.1 with Spring MVC
-- **Java Version**: Java 21
-- **Build Tool**: Maven (wrapper included)
-- **Database**: MariaDB with Spring Data JPA
-- **Code Generation**: Uses Lombok for boilerplate reduction
-- **Monitoring**: Spring Boot Actuator enabled
-- **Package Structure**: Root package is `com.oglimmer.vmsg`
-- **Configuration**: Application settings in `src/main/resources/application.yaml`
+- **Language**: Go 1.26+
+- **HTTP Router**: chi/v5
+- **Database**: MariaDB via database/sql + go-sql-driver/mysql
+- **Migrations**: golang-migrate (SQL files in `migrations/`)
+- **Video Processing**: FFmpeg (VP9 + Opus re-encoding, runs async in goroutines)
+- **Configuration**: Environment variables (DATABASE_DSN, FILE_STORAGE_BASE_DIRECTORY, SERVER_PORT, CORS_ALLOWED_ORIGIN)
+- **API Base Path**: `/api` (all routes mounted under this prefix)
+- **Health Endpoint**: `/api/actuator/health` (compatible with existing K8s/Docker health checks)
 
-### Running Tests
+### Package Structure
 
-Backend tests follow Spring Boot testing conventions using `@SpringBootTest` and related annotations.
+- `cmd/server/` — Entry point, dependency wiring, graceful shutdown
+- `internal/config/` — Environment variable configuration
+- `internal/domain/` — Domain models and DTOs
+- `internal/errors/` — Error types and JSON error responses
+- `internal/handler/` — HTTP handlers and middleware (CORS, recovery)
+- `internal/repository/` — Database access layer (raw SQL)
+- `internal/service/` — Business logic (recording, file storage, video processing, re-encoding)
+
+## Backend (backend/) — Deprecated
+
+> The Spring Boot backend is kept for reference only. Do not use for new development.
 
 ## Project Structure
 
@@ -84,10 +95,11 @@ video-msg/
 │   │   ├── stores/    # Pinia state management
 │   │   └── __tests__/ # Unit tests
 │   └── e2e/           # Playwright e2e tests
-└── backend/           # Spring Boot REST API
-    └── src/
-        ├── main/java/com/oglimmer/vmsg/
-        └── test/      # Backend tests
+├── backend-go/         # Go REST API (active)
+│   ├── cmd/server/    # Entry point
+│   ├── internal/      # Handlers, services, repository
+│   └── migrations/    # SQL schema migrations
+└── backend/           # Spring Boot REST API (deprecated)
 ```
 
 ## Development Workflow
@@ -95,4 +107,4 @@ video-msg/
 The frontend and backend are separate projects with independent build processes. Run them in separate terminals during development:
 
 Terminal 1: `cd frontend && npm run dev`
-Terminal 2: `cd backend && ./mvnw spring-boot:run`
+Terminal 2: `cd backend-go && go run ./cmd/server`
