@@ -1,2 +1,4 @@
 mariadb_data/
 backend/video-storage
+video-storage/
+backend-go/server

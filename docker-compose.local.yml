@@ -3,15 +3,12 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./backend
+      context: ./backend-go
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/video-message
-      - SPRING_DATASOURCE_USERNAME=video-message
-      - SPRING_DATASOURCE_PASSWORD=video-message
-      - JAVA_OPTS=-Xmx1536m -Xms768m -XX:MaxMetaspaceSize=256m
+      - DATABASE_DSN=video-message:video-message@tcp(mariadb:3306)/video-message?parseTime=true
       - FILE_STORAGE_BASE_DIRECTORY=/app/video-storage
     volumes:
       - video-storage:/app/video-storage

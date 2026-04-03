@@ -37,30 +37,28 @@ spec:
           containerPort: 8080
           protocol: TCP
         env:
-        - name: SPRING_DATASOURCE_URL
-          value: "jdbc:mariadb://{{ include "video-msg.database.host" . }}:{{ include "video-msg.database.port" . }}/{{ include "video-msg.database.name" . }}"
-        - name: SPRING_DATASOURCE_USERNAME
+        - name: DATABASE_USER
           valueFrom:
             secretKeyRef:
               name: video-msg-database-secret
               key: database.user
-        - name: SPRING_DATASOURCE_PASSWORD
+        - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: video-msg-database-secret
               key: database.password
-        - name: JAVA_OPTS
-          value: {{ .Values.backend.javaOpts | quote }}
+        - name: DATABASE_DSN
+          value: "$(DATABASE_USER):$(DATABASE_PASSWORD)@tcp({{ include "video-msg.database.host" . }}:{{ include "video-msg.database.port" . }})/{{ include "video-msg.database.name" . }}?parseTime=true"
         - name: FILE_STORAGE_BASE_DIRECTORY
           value: {{ .Values.backend.persistence.mountPath | quote }}
         startupProbe:
           httpGet:
             path: /api/actuator/health
             port: http
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 30
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 10
         livenessProbe:
           httpGet:
             path: /api/actuator/health
