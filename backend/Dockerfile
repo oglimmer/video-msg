@@ -1,5 +1,5 @@
 # Build stage with GraalVM for native image compilation
-FROM ghcr.io/graalvm/native-image-community:21 AS build
+FROM ghcr.io/graalvm/native-image-community:25 AS build
 
 # Install Maven (copy from official Maven image)
 COPY --from=maven:3.9 /usr/share/maven /usr/share/maven
